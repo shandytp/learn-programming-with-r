@@ -1,0 +1,104 @@
+---
+title: "Data Visualization with R"
+author: "Tepe"
+date: "2023-04-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+```
+
+## Belajar Data Visualization with R
+
+- Untuk melakukan data visualisasi pada R, kita bisa menggunakan `ggplot2` plot yang dimana itu merupakan sebuah tools untuk mengubah data menjadi plot
+
+- Kita juga tidak bisa rely pada data viz saja, tetapi kita bisa menggunakan **data transformation** seperti:
+  - select important variables
+  - filter data
+  - membuat fitur baru
+  - membuat summary stats
+  - dll
+
+- Lalu, pada proses explore ini kita juga bisa melakukan proses Exploratory Data Analysis, yang dimana kita combine visualisasi dan data transformation untuk mencari sebuah **insight** dari data yang dimiliki
+
+Untuk membuatnya pun cukup simple, bahkan jauh lebih mudah daripada menggunakan `matplotlib` punya Python!!!
+
+```
+ggplot(data = <DATA>) + 
+  <GEOM_FUNCTION>(mapping = aes(<MAPPINGS>))
+```
+
+### Simple Exercise
+
+- Run `ggplot(data = mpg)` apa yang terjadi? Blank canvas
+
+- Berapa banyak rows pada `mpg`? Berapa banyak cols nya? Kita bisa pake function `dim(nama_data)`
+
+```{r}
+dim(mpg)
+```
+
+- Apa deskripsi data `drv`? Kita bisa pakai function `?mpg` --> tipe drive train, front wheel, rear wheel, 4wd
+
+- Buat Scatter Plot `hwy` vs `cyl`
+
+```{r}
+ggplot(data = mpg) +
+  geom_point(mapping = aes(x = hwy, y = cyl))
+```
+
+- Apa yang terjadi pada Scatter plot `class` vs `drv`? kenapa plot nya not useful? Karena kita nge compare data categorical dengan numerical
+
+```{r}
+ggplot(data = mpg) +
+  geom_point(mapping = aes(x = class, y = drv))
+```
+
+## Lanjut Plotting
+
+- Untuk mengecek tipe data dari masing - masing cols ada banyak caranya, tetapi yang menarik kita bisa menggunakan `sapply`
+
+```{r}
+sapply(mpg, class)
+```
+
+- Setelah itu kita juga bisa menggunakan Facets untuk membuat subplot
+
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy)) + 
+  facet_wrap(~ class, nrow = 2)
+```
+
+- Jika ingin membuat subplot dari dua variable saja, kita bisa menggunakan `~`
+
+```{r}
+ggplot(data = mpg) +
+  geom_point(mapping = aes(x = displ, y = hwy)) +
+  facet_wrap(drv ~ cyl)
+```
+
+- Jika kita membuat subplot dan dua variabel tersebut adalah bernilai **continuous**, maka nanti subplot nya akan panjang
+
+```{r}
+ggplot(data = mpg) +
+  geom_point(mapping = aes(x = displ, y = hwy)) +
+  facet_wrap(cty ~ cyl)
+```
+
+- Kita juga bisa combine scatterplot dengan lineplot dalam satu plot yang sama
+
+```{r}
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) +
+  geom_point() + 
+  geom_smooth()
+```
+
+- Selain itu, kita juga bisa membuat Counting plot di `ggplot`
+
+```{r diamonds, echo=FALSE}
+ggplot(data = diamonds) + 
+  geom_bar(mapping = aes(x = cut))
+```
