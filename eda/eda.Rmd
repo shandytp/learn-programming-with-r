@@ -1,0 +1,184 @@
+---
+title: "Exploratory Data Analysis"
+author: "Tepe"
+date: "2023-04-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+Pada chapter **EDA** ini kita bisa menggunakan **Visualisasi dan Transformation** untuk melakukan explore data in a systematic way, yaitu proses EDA. Biasanya yang dilakukan adalah:
+
+1. Generate questions about your data
+
+2. Search for answers by visualising, transforming, and modelling your data.
+
+3. Use what you learn to refine your questions and/or generate new questions.
+
+EDA merupakan bagian yang penting untuk melakukan proses data analysis, karena kita harus investigate kualitas dari data yang kita gunakan. Data cleaning itu merupakan bagian dari EDA.
+
+Biasanya ada dua tipe pertanyaan yang umum ditanyakan untuk mencari temuan dari dataset yang dimiliki, yaitu:
+
+1. What type of variation occus within my variables?
+
+2. What type of covariation occurs between my variables?
+
+### Variation
+
+Variation is the tendency of the values of a variable to change from measurement to measurement. Berarti seperti distribusi datanya. 
+
+Kita bisa melakukan visualisasi data terhadap data yang **categorical ataupun continuous**. Contohnya jika kita ingin melihat distribusi data **categorical** kita bisa menggunakan bar chart
+
+```{r}
+ggplot(data = diamonds) + 
+  geom_bar(mapping = aes(x = cut))
+
+diamonds %>%
+  count(cut)
+```
+
+Lalu, untuk data yang **continuous** kita bisa menggunakan histogram
+
+```{r}
+ggplot(data = diamonds) + 
+  geom_histogram(mapping = aes(x = carat), binwidth = 0.5)
+```
+
+Kita juga bisa melihat hasil per binning nya menggunakan `count`
+
+```{r}
+diamonds %>%
+  count(cut_width(carat, 0.5))
+```
+
+Dari hasil tersebut kita bisa mendapatkan sebuah temuan, bahwa hampir ada 30.000 observasi yang mimiliki `carat` di value antara 0.25 dan 0.75. Kita juga bisa memainkan parameter `binwidth` untuk mengatur jumlah atau lebar dari binning yang ingin kita buat
+
+Jika kita ingin membuat multiple histogram (berarti untuk data categorical?) kita bisa menggunakan `geom_freqpoly()` daripada `geom_histogram()`
+
+```{r}
+ggplot(data = diamonds, mapping = aes(x = carat, colour = cut)) + 
+  geom_freqpoly(binwidth = 0.1)
+```
+
+Nah, tujuan dari informasi yang kita dapatkan melalui proses EDA kita bisa membuat pertanyaan - pertanyaan seperti berikut:
+
+- Value mana yang most common? Kenapa?
+
+- Value mana yang rare? Apakah sesuai dengan ekspektasi kita?
+
+- Apakah terdapat unusual pattern? Kira - kira apa yang membuat itu terjadi?
+
+Sebagai contoh, kita akan menggunakan histogram berikut. Kita bisa memiliki beberapa pertanyaan seperti:
+
+- Why are there more diamonds at whole carats and common fractions of carats?
+
+- Why are there more diamonds slightly to the right of each peak than there are slightly to the left of each peak?
+
+- Why are there no diamonds bigger than 3 carats?
+
+```{r}
+ggplot(data = diamonds, mapping = aes(x = carat)) + 
+  geom_histogram(binwidth = 0.01)
+```
+
+### Unusual values
+
+Kita juga bisa menemukan unusual values pada data yang dimiliki, seperti **Outliers** yang dimana data points tidak sesuai dengan pattern data yang dimiliki. Contoh nya pada plot di bawah ini memliki outlier
+
+```{r}
+ggplot(diamonds) + 
+  geom_histogram(mapping = aes(x = y), binwidth = 0.5) +
+  coord_cartesian(ylim = c(0, 50))
+```
+
+Kita bisa treat data tersebut dengan `filter()`
+
+```{r}
+unusual <- diamonds %>%
+  filter(y < 3 | y > 20) %>%
+  select(price, x, y, z) %>%
+  arrange(y)
+
+unusual
+```
+
+### Missing Values
+
+Ketika ktia berhadapat unusual values pada data, selain outliers kita juga bisa menghadapi **missing values**. Untuk treat data tersebut kita bisa melakukan beberapa cara berikut:
+
+1. Drop data
+
+```{r}
+diamonds <- diamonds %>%
+  filter(between(y, 3, 20))
+```
+Tetapi method ini tidak direkomendasi karena bukan berarti jika ada satu data point yang invalid, maka semua data jadi tidak valid. Semisal kalo kita memiliki jumlah data yang sedikit, jika data yang unusual kita drop maka nanti kita tidak memiliki data lagi
+
+2. Replacing unusual values with missing values or another values. Cara yang paling mudah kita bisa menggunaakn `mutate()` dan `ifelse()` untuk replace unusual values dengan `NA`
+
+```{r}
+diamonds2 <- diamonds %>%
+  mutate(y = ifelse(y < 3 | y > 20, NA, y))
+```
+
+### Covariation
+
+If variation describes the behavior within a variable, covariation describes the behavior between variables. Covariation is the tendency for the values of two or more variables to vary together in a related way.
+
+#### Categorical and Continuous variable
+
+```{r}
+ggplot(data = diamonds, mapping = aes(x = price)) + 
+  geom_freqpoly(mapping = aes(colour = cut), binwidth = 500)
+```
+
+It’s hard to see the difference in distribution because the overall counts differ so much:
+
+```{r}
+ggplot(diamonds) + 
+  geom_bar(mapping = aes(x = cut))
+```
+
+Nah, untuk melakukan comparison agar lebih gampang, daripada menggunakan count kita bisa menggunakan **density**.
+
+```{r}
+ggplot(data = diamonds, mapping = aes(x = price, after_stat(density))) +
+  geom_freqpoly(mapping = aes(colour = cut), binwidth = 500)
+```
+
+Jika menggunakan density juga masih sulit, kita bisa melihat distribusi price nya menggunakan `geom_boxplot()`
+
+```{r}
+ggplot(data = diamonds, mapping = aes(x = cut, y = price)) + 
+  geom_boxplot()
+```
+
+#### Two categorical variables
+
+Untuk visualisai convariation between categorical, kita perlu count observasi dari masing - masing kombinasi. Kita bisa menggunakan `geom_count()`
+
+```{r}
+ggplot(data = diamonds) +
+  geom_count(mapping = aes(x = cut, y = color))
+```
+
+Atau kita bisa menggunakan count dan combine heatmap
+
+```{r}
+diamonds %>% 
+  count(color, cut) %>%  
+  ggplot(mapping = aes(x = color, y = cut)) +
+    geom_tile(mapping = aes(fill = n))
+```
+
+#### Two continuous variables
+
+Umumnya yang digunakan adalah Scatterplot dan di buku ini juga menggunakan itu
+
+```{r}
+ggplot(data = diamonds) + 
+  geom_point(mapping = aes(x = carat, y = price), alpha = 1 / 100)
+```
