@@ -1,0 +1,269 @@
+---
+title: "Data Transformation"
+author: "Tepe"
+date: "2023-04-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(nycflights13)
+library(tidyverse)
+library(ggplot2)
+```
+
+Pada proses data transformation, kita bisa membuat fitru baru atau membuat summary, atau bahkan kita bisa rename nama fitur yang kita miliki untuk memudahkan kita untuk melakukan analisa data nya nanti.
+
+## Dataset
+
+Pada section ini, nanti kita akan menggunakan dataset `nycflights13` yang memiliki reocrd 336.776 flights yang berangkat dari New York City pada 2013.
+
+```{r}
+flights
+```
+
+Jika dilihat, output dari data tersebut tidak bisa ke terload semua. Untuk melihat secara full, kita bisa menggunakan `View(flights)`. 
+
+Tipe data yang umum digunakan pada dunia data adalah
+
+- `int` adalah integer
+
+- `dbl` adalah doubles atau real numbers
+
+- `chr` adalah character vector atau string
+
+- `dttm` adalah date-times (date + time)
+
+- `lgl` adalah logical, vectors yang memiliki value `TRUE` atau `FALSE`
+
+- `fctr` adalah factors, yang biasanya digunakan untuk merepresentasikan categorical variables dengan fix possible values
+
+- `date` adalah dates
+
+## dplyr
+
+`dplyr` adalah merupakan library yang sering digunakan untuk melakukan proses data transformation di R. Function yang umum digunakan adalah:
+
+- Pick observations by their value `filter()`
+
+- Ordering `arrange()`
+
+- Pick features based on their names `select()`
+
+- Buat new column berdasarkan fitur yang dimiliki `mutate()`
+
+- Membuat summary `summarise()`
+
+- Grouping `group_by()`
+
+### `filter()`
+
+`filter()` digunakan untuk meng-filter value yang kita inginkan berdasarkan parameter yang dimasukkan. Semisal, kita ingin memilih flights yang terjadi di January 1st
+
+```{r}
+filter(flights, month == 1, day == 1)
+```
+
+Selain itu, kita juga bisa assign proses data transformation ke dalam sebuah variable
+
+```{r}
+jan1 <- filter(flights, month == 1, day == 1)
+```
+
+Jika kita ingin langsung mengeluarkan output sekaligus menyimpannya ke dalam suatu variable, kita bisa melakukan cara
+
+```{r}
+(dec25 <- filter(flights, month == 12, day == 25))
+```
+
+### Comparisons
+
+Untuk melakukan filtering, kita bisa menggunakan comparison operator, yang umum digunakan adalah `>`, `>=`, `<`, `<=`, `!=`, dan `==`
+
+### Logical Operator
+
+Kita kita menggunakan `filter()`, kita juga bisa menggunakan multiple arguments. Cara nya kita bisa menggunakan bantuan logical operator seperti: `&` untuk `AND`, `|` untuk `OR`, `!` untuk `NOT`
+
+Semisal kita ingin mencari flights yang terbang pada **November atau December** caranya
+
+```{r}
+filter(flights, month == 11 | month == 12)
+```
+
+#### Exercise `filter()`
+
+- Flights yang memiliki arrival delay two atau lebih dari dua jam
+
+```{r}
+filter(flights, arr_delay >= 120)
+```
+
+- Terbang ke Houston (`IAH` or `HOU`)
+
+```{r}
+filter(flights, dest == "IAH" | dest == "HOU")
+```
+
+- Operated by United, American, or Delta
+
+```{r}
+filter(flights, carrier %in% c("UA", "AA","DL"))
+```
+
+### `arrange()`
+
+Merupakan function untuk melakukan ordering data secara ascending ataupun descending
+
+```{r}
+arrange(flights, year, month, day)
+```
+
+Jika ingin secara descending, kita bisa menggunakan `desc()`
+
+```{r}
+arrange(flights, desc(dep_delay))
+```
+
+### `select()`
+
+Merupakan function data transformation yang umum digunakan untuk memilih kolom yang kita inginkan untuk kita treat analisa, transformasi data, dll. Akan berguna, ketika kita memiliki kolom yang jumlah nya banyak
+
+```{r}
+# select columns by name
+select(flights, year, month, day)
+
+# select all columns between year and day
+select(flights, year:day)
+
+# select all columns kecuali between year and day
+select(flights, -(year:day))
+```
+
+Juga ada beberapa helper function ketika menggunakan `select()`:
+
+- `starts_with("abc")`: matches name dengan awalan "abc"
+
+- `ends_with("xyz")`: matches name dengan akhiran "xyz"
+
+- `contains("ijk")`: matches name yang memiliki unsur "ijk"
+
+- `matches("(.)\\1`): menggunakan regex
+
+- `num_range("x", 1:3)`: matches `x1`, `x2`, `x3`
+
+### `mutate()`
+
+Kita bisa membuat fitur baru (feature engineering) menggunakan function `mutate()`
+
+```{r}
+flights_sml <- select(flights, 
+                      year:day,
+                      ends_with("delay"),
+                      distance,
+                      air_time
+                      )
+mutate(flights_sml,
+       gain = dep_delay - arr_delay,
+       speed = distance / air_time * 60)
+```
+
+Kalau semisal ingin menampilkan kolom yang baru saja dibuat, bisa menggunakan `transmute()`
+
+```{r}
+transmute(flights,
+          gain = dep_delay - arr_delay,
+          hours = air_time / 60,
+          gain_per_hour = gain / hours)
+```
+
+### Function yang umum digunakan
+
+- Arithmetic operators
+
+- Modular arithmetic: `%/%` (integer division) dan `%%` (remainder)
+
+- Logs: `log()`, `log2()`, `log10()`. Tapi umumnya yang digunakan adalah `log2()` karena mudah di interpretasi
+
+- Offsets: `lead()` dan `lag()`
+
+- Cumulative and rolling aggregates: `cumsum()`, `cumprod()`, `cummin()`, `cummax()`, `cummean()`
+
+- Logical comparisons
+
+- Ranking
+
+### `summarise()`
+
+Mirip `group_by()`, tapi bisa digunakan secara bersamaan. Karena kita ngebuatnya jadi dataframe single row
+
+```{r}
+summarise(flights, delay = mean(dep_delay, na.rm = TRUE))
+
+by_day <- group_by(flights, year, month, day)
+summarise(by_day, delay = mean(dep_delay, na.rm = TRUE))
+```
+
+#### Using pipe
+
+Pipe merupakan "tools" untuk melakukan multiple operations secara sekaligus!!! Untuk syntax nya `%>%` atau `|>` (khusus R versi terbaru)
+
+Sebelum menggunakan Pipe
+
+```{r}
+by_dest <- group_by(flights, dest)
+delay <- summarise(by_dest,
+  count = n(),
+  dist = mean(distance, na.rm = TRUE),
+  delay = mean(arr_delay, na.rm = TRUE)
+)
+delay <- filter(delay, count > 20, dest != "HNL")
+
+# It looks like delays increase with distance up to ~750 miles 
+# and then decrease. Maybe as flights get longer there's more 
+# ability to make up delays in the air?
+ggplot(data = delay, mapping = aes(x = dist, y = delay)) +
+  geom_point(aes(size = count), alpha = 1/3) +
+  geom_smooth(se = FALSE)
+#> `geom_smooth()` using method = 'loess' and formula = 'y ~ x'
+```
+
+Ketika menggunakan Pipe
+
+```{r}
+delays <- flights %>% 
+  group_by(dest) %>% 
+  summarise(
+    count = n(),
+    dist = mean(distance, na.rm = TRUE),
+    delay = mean(arr_delay, na.rm = TRUE)
+  ) %>% 
+  filter(count > 20, dest != "HNL")
+```
+
+Contoh lain menggunakan Pipe
+
+```{r}
+# without pipe
+# add function
+add <- function(x,y) {
+  return (x + y)
+}
+# multiply function
+mul <- function(x,y) {
+  return (x * y)
+}
+# div function
+div <- function(x,y) {
+  return (x / y)
+}
+
+# calling functions sequentially
+res1 <- add(2,4)
+res2 <- mul(res1,8)
+res3 <- div(res2,2)
+print(res3)
+
+# Using with pipe
+res <- add(2,4) %>% mul(8) %>% div(2)
+print(res)
+```
