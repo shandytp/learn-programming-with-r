@@ -1,0 +1,387 @@
+---
+title: "Program in R"
+author: "Tepe"
+date: "2023-05-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(magrittr)
+library(tidyr)
+```
+
+Pada section ini nanti kita akan belajar tentang:
+
+1. Pipe `%>%`
+
+2. Functions
+
+3. Data Structures
+
+4. Iteration
+
+## Pipes
+
+Pipe merupakan tools untuk melakukan multiple operations. Goals dari menggunakan pipe adalah untuk membuat code kita lebih mudah untuk dibaca dan dimengerti oleh orang lain.
+
+Semisal kita memiliki contoh object dummy seperti berikut
+
+```
+foo_foo <- little_bunny()
+```
+
+Lalu didalamnya itu terdapat "function" seperti `hop()`, `scoop()`, dan `bop()`. 
+
+Untuk membuat "cerita" dari object dan function tersebut, kita bisa menggunakan beberapa cara
+
+#### Intermediate steps
+
+Ini merupakan simples approach
+
+```
+foo_foo_1 <- hop(foo_foo, through = forest)
+foo_foo_2 <- scoop(foo_foo_1, up = field_mice)
+foo_foo_3 <- bop(foo_foo_2, on = head)
+```
+
+Tetapi cara tersebut memiliki problem, yaitu:
+
+- Code kita menjadi berantakan karena banyak unimportant names
+
+- Semakin banyak "cerita" nya maka akan semakin panjang nama variable nya
+
+#### Overwrite the original
+
+Untuk metode yang ini, kita tidak perlu membuat banyak variable baru cukup overwrite original variable
+
+```
+foo_foo <- hop(foo_foo, through = forest)
+foo_foo <- scoop(foo_foo, up = field_mice)
+foo_foo <- bop(foo_foo, on = head)
+```
+
+Tetapi metode ini pun juga memiliki kelemahan, jika ada satu proses yang salah maka kita harus mengulangi nya dari awal. Selain itu, proses nya terlalu redundan, coba perhatikan kita sudah menulis variable `foo_foo` sebanyak enam kali!
+
+#### Function composition
+
+Metode lain kita bisa menggunakan function yang digabung menjadi satu.
+
+```
+bop(
+  scoop(
+    hop(foo_foo, through = forest),
+    up = field_mice
+  ), 
+  on = head
+)
+```
+
+Sebenarnya sudah rapi, tetapi sulit dibaca.
+
+#### Pipe method
+
+Jika kita menggunakan pipe, maka code nya akan menjadi seperti berikut
+
+```
+foo_foo %>%
+  hop(through = forest) %>%
+  scoop(up = field_mice) %>%
+  bop(on = head)
+```
+
+Ketika kita menggunakan pipe, maka "cerita" nya akan menjadi runut dan lebih enak dibaca. Sehingga ceritanya menjadi Foo Foo hops, setelah itu scoops, dan terakhirnya akan bops.
+
+### Kapan ketika tidak menggunakan pipe
+
+Pipe merupakan tools yang powerful, tetapi bukan berarti bisa untuk menyelesaikan semua masalah. Sebaiknya kita tidak menggunakan pipe ketika:
+
+- Proses pipe yang dilakukan panjang, let's say ten process. Baiknya kita tampung saja proses nya ke dalam variable / object dengan meaningful name agar lebih mudah untuk di debugging
+
+- Kita memiliki multiple inputs atau outputs
+
+- Ketika sudah menggunakan complex dependency structure
+
+Ada case menarik ketika kita ingin assign new value ke variable baru dengan proses pipe. Kita bisa menggunakan `%<>%`
+
+```
+mtcars <- mtcars %>%
+    transform(cyl = cyl * 2)
+```
+
+dengan
+
+```
+mtcars %<>% transform(cyl = cyl * 2)
+```
+
+## Functions
+
+Alasan menggunakan functions adalah membuat kita menjadi lebih rapi, modular, lebih dimengerti, tidak redundan, dan mudah untuk melakukan debugging jika ada kesalahan atau bug.
+
+### Kapan ketika harus menggunakan function?
+
+Semisal kita memiliki code seperti di bawah, kita ingin melakukan proses yang sama tetapi perbedaannya hanya di kolom yang ingin di treat
+
+```
+df <- tibble::tibble(
+  a = rnorm(10),
+  b = rnorm(10),
+  c = rnorm(10),
+  d = rnorm(10)
+)
+
+df$a <- (df$a - min(df$a, na.rm = TRUE)) / 
+  (max(df$a, na.rm = TRUE) - min(df$a, na.rm = TRUE))
+df$b <- (df$b - min(df$b, na.rm = TRUE)) / 
+  (max(df$b, na.rm = TRUE) - min(df$a, na.rm = TRUE))
+df$c <- (df$c - min(df$c, na.rm = TRUE)) / 
+  (max(df$c, na.rm = TRUE) - min(df$c, na.rm = TRUE))
+df$d <- (df$d - min(df$d, na.rm = TRUE)) / 
+  (max(df$d, na.rm = TRUE) - min(df$d, na.rm = TRUE))
+```
+
+Sayangnya code di atas itu terlalu redundan dan rawan terjadi kesalahan dalam penulisan. Contoh di atas pada bagian `df$b` kita lupa mengganti `a` menjadi `b`.
+
+Sehingga, kita memerlukan function. Untuk cara membuatnya cukup simple, kita harus memiliki:
+
+1. Memiliki **nama** function yang representatif
+
+2. Jika memiliki input, kita harus memasukkan **arguments** pada function yang kita buat
+
+3. Harus ada proses di dalam **body** function
+
+Kita akan coba membuat function berdasarkan contoh code sebelumnya
+
+```{r}
+rescale01 <- function(x) {
+    rng <- range(x, na.rm = TRUE)
+    (x - rng[1]) / (rng[2] - rng[1])
+}
+
+rescale01(c(0, 5, 10))
+```
+
+Sehingga, kalau kita aplikasikan function tersebut ke dalam code sebelumnya akan berubah menjadi berikut
+
+```
+df$a <- rescale01(df$a)
+df$b <- rescale01(df$b)
+df$c <- rescale01(df$c)
+df$d <- rescale01(df$d)
+```
+
+Dibandingkan dengan sebelumnya code di atas jauh lebih mudah dimengerti!!!
+
+Untuk naming conventions dalam pembuatan function itu juga penting, sudah di mention juga di atas kalau function itu harus representatif terhadap proses yang dilakukan pada function tersebut atau disarankan menggunakan kata kerja. Berikut adalah contoh - contoh penulisan yang baik dan buruk dalam function
+
+```
+# Terlalu pendek
+f()
+
+# Bukan kata kerja atau descriptive
+my_awesome_function()
+
+# Long, but clear
+impute_missing()
+collapse_years()
+```
+
+Jika kita ingin membuat nama function tetapi agak panjang, sebaiknya kita menggunakan "snake_case". Selain itu, jangan menggunakan nama function yang sudah dipakai oleh R. Contoh: c, mean, median, dll
+
+### Conditional Execution
+
+Ketika kita ingin membuat conditional code, kita bisa menggunakan `if`
+
+```
+if (condition) {
+    # code akan berjalan ketika kondisi TRUE
+} else {
+    # code akanberjalan ketika kodnisi FALSE
+}
+```
+
+Selain itu, kita bisa combine conditional dengan function
+
+```{r}
+has_name <- function(x) {
+  nms <- names(x)
+  if (is.null(nms)) {
+    rep(FALSE, length(x))
+  } else {
+    !is.na(nms) & nms != ""
+  }
+}
+```
+
+Selain itu, di dalam conditional kita bisa menggunakan logical expressions seperti `||` (or) dan `&&` (and)
+
+### Multiple conditions
+
+Semisal ketika kita ingin membuat multiple if statements, kita bisa menggunakan seperti berikut
+
+```
+if (this) {
+    # do that
+} else if (that) {
+    # do something else
+} else {
+    #
+}
+```
+
+Tetapi jika kita memiliki `if` statements yang panjang, kita buisa menggunakan `switch()`
+
+```
+function(x, y, op) {
+    switch(op,
+        plus = x + y,
+        minus = x - y,
+        times = x * y,
+        divide = x / y,
+        stop("Unknown operations!")
+    )
+}
+```
+
+### Function Arguments
+
+#### Checking values
+
+Dalam pembuatan function, kita juga bisa melakukan "defense" terhadap input data yang kita masukkan, contohnya kita bisa prevent ketika input data yang kita masukkan itu tidak sama
+
+```{r}
+wt_mean <- function(x, w) {
+    if (length(x) != length(w)) {
+        stop("`x` and `w` must be the same length", call. = FALSE)
+    }
+    sum(w * x) / sum(w)
+}
+```
+
+#### dot-dot-dot (...)
+
+Merupakan special arguments jika kita memiliki jumlah input yang tidak menentu atau arbitrary.
+
+```{r}
+commas <- function(...) stringr::str_c(..., collapse = ", ")
+
+# with 10 letters
+commas(letters[1:10])
+
+# with 5 letters
+commas(letters[1:5])
+```
+
+#### Return values
+
+Merupakan komponen dari function yang berguna untuk mengembalikan sebuah value dari function yang dibuat dan bisa disimpan ke dalam object lain, kita cukup menggunakan `return()`
+
+```{r}
+add <- function(num_1, num_2) {
+    res <- num_1 + num_2
+    return(res)
+}
+
+add(2, 3)
+```
+
+## Vectors
+
+Pada section ini kita akan belajar tentang tipe data yang bisa kita buat sendiri pada R, karena pada dasarnya kita memang bisa buat sendiri tidak harus dalam bentuk tibbles.
+
+Ada dua tipe dari vectors:
+
+1. **Atomic** vectors, terdiri dari: **logical, integer, double, character, complex, dan raw**. Integer dan double termasuk ke dalam **numeric** vectors
+
+2. **Lists**, juga bisa disebut sebagai recursive vectors karena bisa membuat list di dalam list
+
+Pada vector itu memiliki dua komponen yang penting:
+
+1. **type** yang bisa dilihat menggunakan `typeof() untuk mengecek tipe data
+
+```{r}
+typeof(letters)
+
+typeof(1:10)
+```
+
+2. **length** yang bisa dilihat menggunakan `length()` untuk mengecek panjang data
+
+```{r}
+x <- list("a", "b", 1:10)
+length(x)
+```
+
+### Atomic Vector
+
+Untuk membuat data nya kita bisa menggunakan `c()`
+
+#### Logical
+
+Memiliki tiga possible values: `FALSE`, `TRUE`, dan `NA`. Sering digunakan untuk melakukan comparisons
+
+```{r}
+c(TRUE, TRUE, FALSE, NA)
+```
+
+#### Numeric
+
+Integer dan double merupakan numeric vector
+
+#### Character
+
+Merupakan most complex type of atomic vector, karena each element dari character vector adalah string dan string bisa memiliki jumlah yang arbitrary.
+
+```{r}
+# di bawah ini merupakan contoh dari string
+x <- "This is a reasonably long string"
+#pryr::object_size(x)
+
+y <- rep(x, 1000)
+#pryr::object_size(y)
+```
+
+### Coercion
+
+Kita bisa convert vector ke bentuk vector lainnya, seperti `as.logical()`, `as.integer()`, `as.double()`, atau `as.character()`.
+
+### Subsetting
+
+Kita bisa melakukan proses slicing atau indexing terhadap vector yang kita miliki. Cukup gunakan `[]`
+
+```{r}
+x <- c("one", "two", "three", "four", "five")
+
+# subseting by index
+x[c(3, 2, 5)]
+
+x[c(1, 1, 5, 5, 5, 2)]
+```
+
+### Recursive Vectors (lists)
+
+List merupakan bentuk complex dari atomic vectors, karena bisa membuat list di dalam list. Untuk membuat list kita bisa menggunakan `list()`
+
+```{r}
+# single list
+x <- list(1, 2, 3)
+
+# list di dalam list
+z <- list(list(1, 2), list(3, 4))
+```
+
+### Augmented Vectors
+
+Atomic vectors dan list adalah building block dari vector - vector yang lain, seperti **augmented vectors** ini. Bentuk dari augmented vectors ini sudah kita pelajari di section - section sebelumnya, seperti:
+
+- Factors
+
+- Dates
+
+- Date-times
+
+- Tibbles
+
+## Iteration
+
